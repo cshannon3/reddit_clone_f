@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:reddit_clone_f/Controllers/reddit_controller.dart';
+import 'package:reddit_clone_f/Screens/image_overlay_screen.dart';
+import 'package:reddit_clone_f/Screens/single_post_screen.dart';
 import 'package:reddit_clone_f/blocs/PostsBloc.dart';
-import 'package:reddit_clone_f/login.dart';
-import 'package:reddit_clone_f/postsScreen.dart';
+import 'package:reddit_clone_f/Screens/login.dart';
+import 'package:reddit_clone_f/Screens/postsScreen.dart';
 import 'package:reddit_clone_f/providers/posts_bloc_provider.dart';
 
 void main() => runApp(new MyApp());
@@ -54,8 +56,16 @@ class _MyHomePageState extends State<MyHomePage> {
     if (!redditcontroller.redditInitialized) {
       return LoginWebView(redditController: redditcontroller);
     }
-    return PostsScreen(
-      redditController: redditcontroller,
+    return Stack(
+      children: <Widget>[
+        PostsScreen(
+          redditController: redditcontroller,
+        ),
+        ImageOverlayScreen(
+          redditController: redditcontroller,
+        ),
+        SinglePostScreen(redditController: redditcontroller),
+      ],
     );
   }
 }

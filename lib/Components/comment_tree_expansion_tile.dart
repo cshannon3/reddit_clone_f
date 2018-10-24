@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter/material.dart';
+import 'package:reddit_clone_f/Controllers/reddit_controller.dart';
+import 'package:reddit_clone_f/Models/comment_tree.dart';
 
 const Duration _kExpand = Duration(milliseconds: 200);
 
@@ -9,7 +11,7 @@ const Duration _kExpand = Duration(milliseconds: 200);
 /// This widget is typically used with [ListView] to create an
 /// "expand / collapse" list entry. When used with scrolling widgets like
 /// [ListView], a unique [PageStorageKey] must be specified to enable the
-/// [CustomExpansionTile] to save and restore its expanded state when it is scrolled
+/// [CommentTreeExpansionTile] to save and restore its expanded state when it is scrolled
 /// in and out of view.
 ///
 /// See also:
@@ -18,19 +20,16 @@ const Duration _kExpand = Duration(milliseconds: 200);
 ///    expansion tile represents a sublist.
 ///  * The "Expand/collapse" section of
 ///    <https://material.io/guidelines/components/lists-controls.html>.
-class CustomExpansionTile extends StatefulWidget {
+class CommentTreeExpansionTile extends StatefulWidget {
   /// Creates a single-line [ListTile] with a trailing button that expands or collapses
   /// the tile to reveal or hide the [children]. The [initiallyExpanded] property must
   /// be non-null.
-  const CustomExpansionTile({
+  const CommentTreeExpansionTile({
     Key key,
-    this.leading,
-    this.onTap,
-    @required this.title,
+    this.commentTree,
+    this.redditController,
     this.backgroundColor,
     this.onExpansionChanged,
-    this.children = const <Widget>[],
-    this.trailing,
     this.initiallyExpanded = false,
   })  : assert(initiallyExpanded != null),
         super(key: key);
@@ -38,12 +37,12 @@ class CustomExpansionTile extends StatefulWidget {
   /// A widget to display before the title.
   ///
   /// Typically a [CircleAvatar] widget.
-  final Widget leading;
+  final CommentTree commentTree;
+  final RedditController redditController;
 
   /// The primary content of the list item.
   ///
   /// Typically a [Text] widget.
-  final Widget title;
 
   /// Called when the tile expands or collapses.
   ///
@@ -52,27 +51,18 @@ class CustomExpansionTile extends StatefulWidget {
   /// the value false.
   final ValueChanged<bool> onExpansionChanged;
 
-  /// The widgets that are displayed when the tile expands.
-  ///
-  /// Typically [ListTile] widgets.
-  final List<Widget> children;
-
   /// The color to display behind the sublist when expanded.
   final Color backgroundColor;
-
-  /// A widget to display instead of a rotating arrow icon.
-  final Widget trailing;
 
   /// Specifies if the list tile is initially expanded (true) or collapsed (false, the default).
   final bool initiallyExpanded;
 
-  final Function onTap;
-
   @override
-  _CustomExpansionTileState createState() => _CustomExpansionTileState();
+  _CommentTreeExpansionTileState createState() =>
+      _CommentTreeExpansionTileState();
 }
 
-class _CustomExpansionTileState extends State<CustomExpansionTile>
+class _CommentTreeExpansionTileState extends State<CommentTreeExpansionTile>
     with SingleTickerProviderStateMixin {
   static final Animatable<double> _easeOutTween =
       CurveTween(curve: Curves.easeOut);
@@ -154,34 +144,23 @@ class _CustomExpansionTileState extends State<CustomExpansionTile>
         children: <Widget>[
           IconTheme.merge(
             data: IconThemeData(color: _iconColor.value),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: Container(
-                    color: Theme.of(context).canvasColor,
-                    child: ListTile(
-                      onTap: widget.onTap, //_handleTap,
-                      leading: widget.leading,
-                      title: DefaultTextStyle(
-                        style: Theme.of(context)
-                            .textTheme
-                            .subhead
-                            .copyWith(color: titleColor),
-                        child: widget.title,
-                      ),
-                    ),
-                  ),
+            child: Row(children: <Widget>[
+              Text(widget.commentTree.author),
+              Expanded(child: Container()),
+              Text(widget.commentTree.score.toString()),
+              RotationTransition(
+                turns: _iconTurns,
+                child: IconButton(
+                  onPressed: _handleTap,
+                  icon: const Icon(Icons.expand_more),
+                  iconSize: 30.0,
                 ),
-                widget.trailing ??
-                    RotationTransition(
-                      turns: _iconTurns,
-                      child: IconButton(
-                        onPressed: _handleTap,
-                        icon: const Icon(Icons.expand_more),
-                        iconSize: 30.0,
-                      ),
-                    ),
-              ],
+              ),
+            ]),
+          ),
+          Container(
+            child: Center(
+              child: Text(widget.commentTree.body),
             ),
           ),
           ClipRect(
@@ -215,7 +194,16 @@ class _CustomExpansionTileState extends State<CustomExpansionTile>
     return AnimatedBuilder(
       animation: _controller.view,
       builder: _buildChildren,
-      child: closed ? null : Column(children: widget.children),
+      child: (closed || widget.commentTree.replies == null)
+          ? null
+          : Column(
+              children:
+                  List.generate(widget.commentTree.replies.length, (index) {
+              return CommentTreeExpansionTile(
+                commentTree: widget.commentTree.replies[index],
+                redditController: widget.redditController,
+              );
+            })),
     );
   }
 }

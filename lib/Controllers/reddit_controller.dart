@@ -7,6 +7,9 @@ import 'package:reddit_clone_f/nolookie.dart' as NL;
 
 class RedditController extends ChangeNotifier {
   Reddit reddit;
+  CurrentScreen _currentScreen = CurrentScreen.loginScreen;
+
+  CurrentScreen get currentScreen => _currentScreen;
 
   /* AUTH */
   bool _redditInitialized = false;
@@ -18,6 +21,7 @@ class RedditController extends ChangeNotifier {
     await reddit.authUrl("http://localhost:8080", scopes: ["*"], state: "TEST");
     await reddit.authFinish(code: code);
     _redditInitialized = true;
+    _currentScreen = CurrentScreen.postsScreen;
     notifyListeners();
   }
 
@@ -28,29 +32,48 @@ class RedditController extends ChangeNotifier {
   List<Post> _posts = [];
   String _currentSubreddit = "frontpage";
   bool _newPosts = false;
+  String _postImageSelected;
+  //bool _showimage = false;
 
-  Post activePost;
-  List<CommentTree> comments;
+  Post _activePost;
+  List<CommentTree> _commentTrees;
 
   /* GETTERS AND SETTERS */
   List<Post> get posts => _posts;
   String get currentSubreddit => _currentSubreddit;
   bool get newPosts => _newPosts;
-
-  String _postImageSelected;
-  String get postImageSelected => _postImageSelected;
+  List<CommentTree> get commentTrees => _commentTrees;
 
   set setCurrentSubreddit(String newSubreddit) {
     _currentSubreddit = newSubreddit;
     getSubredditPosts(_currentSubreddit);
   }
 
+  exitSinglePostScreen() {
+    _commentTrees = [];
+    _activePost = null;
+    _currentScreen = CurrentScreen.postsScreen;
+    notifyListeners();
+  }
+
   postsRecieved() {
     _newPosts = false;
   }
 
+  String get postImageSelected => _postImageSelected;
+  //bool get showimage => _showimage;
+
+  selectPostImage(String imageurl) {
+    _postImageSelected = imageurl;
+    //_showimage = true;
+    _currentScreen = CurrentScreen.imageOverlayScreen;
+    notifyListeners();
+  }
+
   clearpostImage() {
     _postImageSelected = null;
+    //_showimage = false;
+    _currentScreen = CurrentScreen.postsScreen;
     notifyListeners();
   }
 
@@ -109,18 +132,30 @@ class RedditController extends ChangeNotifier {
     print("Dammit");
   }
 
-/* COMMENTS */
+/* SinglePostPage */
+  openPostScreen(Post newActivePost) async {
+    _currentScreen = CurrentScreen.singlePostScreen;
+    _activePost = newActivePost;
+    await comments(newActivePost.subreddit, newActivePost.id);
+    notifyListeners();
+  }
+
   comments(String sub, String id) async {
     // var data = await
-    List<CommentTree> commentTrees = [];
+    _commentTrees = [];
     var data = await reddit.comments(sub, id);
+    // print(data);
 
     List comments = data[1]['data']['children'];
     comments.forEach((_commentTree) {
-      commentTrees.add(CommentTree.fromJson(_commentTree['data'], 0));
+      try {
+        _commentTrees.add(CommentTree.fromJson(_commentTree['data'], 0));
+      } catch (e) {
+        print(_commentTree);
+      }
     });
 
-    commentTrees.forEach((_c) {
+    /* _commentTrees.forEach((_c) {
       print("${_c.depth} :   ${_c.body}");
       if (_c.replies != null) {
         _c.replies.forEach((_c2) {
@@ -128,24 +163,23 @@ class RedditController extends ChangeNotifier {
         });
       }
       //print(_c.replies.length);
-    });
+    });*/
   }
 
-  selectPostImage(String imageurl) {
-    _postImageSelected = imageurl;
-    notifyListeners();
-  }
   /* USER ACTIONS */
 
   vote(String id, String direction) {
-    // var data =
     reddit.vote(id, direction);
-    /* data.forEach((a, b) {
-      print(" $a and $b");
-    });*/
   }
 }
 
 final List Sortby_options = ["hot", "top", "new", "controversal"];
 
 final List t_options = ["hour", "day", "week", "month", "year", "all"];
+
+enum CurrentScreen {
+  postsScreen,
+  singlePostScreen,
+  imageOverlayScreen,
+  loginScreen,
+}

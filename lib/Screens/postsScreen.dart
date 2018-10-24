@@ -3,7 +3,7 @@ import 'package:reddit_clone_f/Components/post_widget.dart';
 import 'package:reddit_clone_f/Controllers/reddit_controller.dart';
 import 'package:reddit_clone_f/blocs/PostsBloc.dart';
 import 'package:reddit_clone_f/Models/post.dart';
-import 'package:reddit_clone_f/generic/custom_expansion_tile.dart';
+import 'package:reddit_clone_f/generic/menu_items_expansion_tile.dart';
 import 'package:reddit_clone_f/providers/posts_bloc_provider.dart';
 
 class PostsScreen extends StatefulWidget {
@@ -19,9 +19,8 @@ class PostsScreen extends StatefulWidget {
 
 class PostsScreenState extends State<PostsScreen>
     with TickerProviderStateMixin {
-  List<Post> posts = [];
   String currentSubreddit = "frontpage";
-  bool showimage = false;
+  CurrentScreen screen = CurrentScreen.postsScreen;
 
   List<String> subReddits = [
     "frontpage",
@@ -43,15 +42,10 @@ class PostsScreenState extends State<PostsScreen>
   @override
   void initState() {
     super.initState();
-
     widget.redditController.addListener(() {
-      /* if (widget.redditController.currentSubreddit != currentSubreddit) {
-        print("hey");
-        widget.redditController.setCurrentSubreddit=currentSubreddit;
-        widget.redditController.getSubredditPosts(currentSubreddit);
-      }*/
-      if (widget.redditController.newPosts) {
-        widget.redditController.posts;
+      if (widget.redditController.currentScreen == screen &&
+          widget.redditController.newPosts) {
+        widget.redditController.postsRecieved();
         print("huh");
         setUpAnimations();
         setState(() {
@@ -96,10 +90,7 @@ class PostsScreenState extends State<PostsScreen>
         IconButton(
           icon: Icon(Icons.filter_hdr),
           onPressed: () {
-            setState(() {
-              widget.redditController.clearpostImage();
-              showimage = false;
-            });
+            setState(() {});
           },
         ),
         IconButton(
@@ -149,7 +140,7 @@ class PostsScreenState extends State<PostsScreen>
                     )),
               ),
             ),
-            CustomExpansionTile(
+            MenuItemsExpansionTile(
               backgroundColor: Colors.grey,
               onTap: () {
                 Navigator.pop(context);
@@ -211,9 +202,6 @@ class PostsScreenState extends State<PostsScreen>
               title: Text('Go to'),
               trailing: Icon(Icons.arrow_drop_down),
               onTap: () {
-                // Update the state of the app
-                // ...
-                // Then close the drawer
                 Navigator.pop(context);
               },
             ),
@@ -302,7 +290,7 @@ class PostsScreenState extends State<PostsScreen>
     });
   }
 
-  List<Widget> _buildUnanimated() {
+  /*List<Widget> _buildUnanimated() {
     List<Widget> postWidgets = [];
     posts.forEach((post) {
       postWidgets.add(Padding(
@@ -316,7 +304,7 @@ class PostsScreenState extends State<PostsScreen>
       ));
     });
     return postWidgets;
-  }
+  }*/
 
   @override
   Widget build(BuildContext context) {
@@ -363,46 +351,9 @@ class PostsScreenState extends State<PostsScreen>
               ),
             ),
           ),
-          /*showimage
-              ? Stack(
-                  fit: StackFit.expand,
-                  children: <Widget>[
-                    Opacity(
-                      opacity: .8,
-                      child: Container(
-                        color: Colors.black,
-                      ),
-                    ),
-                    Image.network(bloc.redditController.postImageSelected),
-                  ],
-                )
-              : Container(),*/
         ],
       ),
       drawer: _buildDrawer(),
-    );
-  }
-}
-
-class ExpandableMenuItem extends StatelessWidget {
-  final Widget title;
-  final Widget leading;
-
-  const ExpandableMenuItem({Key key, this.title, this.leading})
-      : super(key: key);
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: <Widget>[
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            leading,
-            title,
-            Icon(Icons.arrow_drop_down),
-          ],
-        ),
-      ],
     );
   }
 }

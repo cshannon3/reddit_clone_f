@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_webview_plugin/flutter_webview_plugin.dart';
 import 'package:reddit_clone_f/Controllers/reddit_controller.dart';
 import 'package:reddit_clone_f/blocs/PostsBloc.dart';
-import 'nolookie.dart' as NL;
+import 'package:reddit_clone_f/nolookie.dart' as NL;
 
 class LoginWebView extends StatefulWidget {
   final RedditController redditController;

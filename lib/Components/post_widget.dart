@@ -133,8 +133,8 @@ class PostWidgetState extends State<PostWidget> {
                     padding: const EdgeInsets.only(left: 12.0, right: 3.0),
                     child: IconButton(
                       onPressed: () {
-                        widget.redditController.comments(
-                            widget.newPost.subreddit, widget.newPost.id);
+                        print('Hpp');
+                        widget.redditController.openPostScreen(widget.newPost);
                       },
                       icon: Icon(
                         Icons.chat_bubble,
