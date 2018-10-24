@@ -7,17 +7,10 @@ import 'package:reddit_clone_f/nolookie.dart' as NL;
 
 class RedditController extends ChangeNotifier {
   Reddit reddit;
+
+  /* AUTH */
   bool _redditInitialized = false;
-  ListingResult _currentData;
-  String _postImageSelected;
-
   bool get redditInitialized => _redditInitialized;
-  String get postImageSelected => _postImageSelected;
-
-  clearpostImage() {
-    _postImageSelected = null;
-    notifyListeners();
-  }
 
   initFirst(String code) async {
     reddit = Reddit(new Client());
@@ -28,43 +21,81 @@ class RedditController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<List<Post>> getSubredditPosts(String subreddit,
+  /* POSTS && SUBREDDITS */
+
+  /* VARIABLES */
+  ListingResult _currentPostData;
+  List<Post> _posts = [];
+  String _currentSubreddit = "frontpage";
+  bool _newPosts = false;
+
+  Post activePost;
+  List<CommentTree> comments;
+
+  /* GETTERS AND SETTERS */
+  List<Post> get posts => _posts;
+  String get currentSubreddit => _currentSubreddit;
+  bool get newPosts => _newPosts;
+
+  String _postImageSelected;
+  String get postImageSelected => _postImageSelected;
+
+  set setCurrentSubreddit(String newSubreddit) {
+    _currentSubreddit = newSubreddit;
+    getSubredditPosts(_currentSubreddit);
+  }
+
+  postsRecieved() {
+    _newPosts = false;
+  }
+
+  clearpostImage() {
+    _postImageSelected = null;
+    notifyListeners();
+  }
+
+  /* SUBREDDIT POSTS DATA */
+  getSubredditPosts(String subreddit,
       {String sortby = "hot", String t_option = "week"}) async {
+    _currentSubreddit = subreddit;
+    _posts = [];
     if (_redditInitialized) {
-      _currentData = sortby == "hot"
+      _currentPostData = sortby == "hot"
           ? await reddit.sub(subreddit).hot().limit(20).fetch()
           : sortby == "top"
               ? await reddit.sub(subreddit).top(t_option).limit(20).fetch()
               : await reddit.sub(subreddit).hot().limit(20).fetch();
-      List d = _currentData['data']['children'];
+      List d = _currentPostData['data']['children'];
       var list = d.map((_post) {
         return Post.fromJson(_post['data']);
       }).toList();
       if (list is List<Post>) {
-        return list;
+        _posts = list;
+        _newPosts = true;
+        notifyListeners();
       }
-      return null;
     }
   }
 
-  Future<List<Post>> getFrontPage() async {
+  getFrontPage() async {
+    _newPosts = true;
     if (_redditInitialized) {
-      _currentData = await reddit.frontPage.best().limit(20).fetch();
-      List d = _currentData['data']['children'];
+      _currentPostData = await reddit.frontPage.best().limit(20).fetch();
+      List d = _currentPostData['data']['children'];
       var list = d.map((_post) {
         return Post.fromJson(_post['data']);
       }).toList();
       if (list is List<Post>) {
-        return list;
+        _posts = list;
+        _newPosts = true;
+        notifyListeners();
       }
-      print("bad");
-      return null;
     }
   }
 
   Future<List<Post>> fetchmore() async {
-    if (_currentData != null) {
-      var _newData = await _currentData.fetchMore();
+    if (_currentPostData != null) {
+      var _newData = await _currentPostData.fetchMore();
       List d = _newData['data']['children'];
       print(d);
       var list = d.map((_post) {
@@ -78,23 +109,7 @@ class RedditController extends ChangeNotifier {
     print("Dammit");
   }
 
-  getComments(String id, String subreddit) async {
-    if (_redditInitialized) {
-      var data = await reddit.sub(subreddit).coments(id).fetch();
-      List d = data['data']['children'];
-
-      print(d);
-    }
-  }
-
-  vote(String id, String direction) {
-    // var data =
-    reddit.vote(id, direction);
-    /* data.forEach((a, b) {
-      print(" $a and $b");
-    });*/
-  }
-
+/* COMMENTS */
   comments(String sub, String id) async {
     // var data = await
     List<CommentTree> commentTrees = [];
@@ -120,14 +135,17 @@ class RedditController extends ChangeNotifier {
     _postImageSelected = imageurl;
     notifyListeners();
   }
+  /* USER ACTIONS */
+
+  vote(String id, String direction) {
+    // var data =
+    reddit.vote(id, direction);
+    /* data.forEach((a, b) {
+      print(" $a and $b");
+    });*/
+  }
 }
 
-/*enum SortBy {
-  hot,
-  top,
-  rising,
-  newest,
-}*/
 final List Sortby_options = ["hot", "top", "new", "controversal"];
 
 final List t_options = ["hour", "day", "week", "month", "year", "all"];

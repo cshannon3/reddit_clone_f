@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_webview_plugin/flutter_webview_plugin.dart';
 import 'package:reddit_clone_f/Controllers/reddit_controller.dart';
 import 'package:reddit_clone_f/blocs/PostsBloc.dart';
+import 'nolookie.dart' as NL;
 
 class LoginWebView extends StatefulWidget {
   final RedditController redditController;
@@ -15,9 +16,8 @@ class LoginWebView extends StatefulWidget {
 
 class _LoginWebViewState extends State<LoginWebView> {
   final String authurl =
-      "https://www.reddit.com/api/v1/authorize?client_id=dVQroB7sWdX7NA&response_type=code&state=TEST&redirect_uri=" +
+      "https://www.reddit.com/api/v1/authorize?client_id=${NL.identifier}&response_type=code&state=TEST&redirect_uri=" +
           "http://localhost:8080" +
-          //  "https://www.reddit.com" +
           "&scope=*";
 
   // Instance of WebView plugin

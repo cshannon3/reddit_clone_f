@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:reddit_clone_f/Components/post_widget.dart';
+import 'package:reddit_clone_f/Controllers/reddit_controller.dart';
 import 'package:reddit_clone_f/blocs/PostsBloc.dart';
 import 'package:reddit_clone_f/Models/post.dart';
 import 'package:reddit_clone_f/generic/custom_expansion_tile.dart';
 import 'package:reddit_clone_f/providers/posts_bloc_provider.dart';
 
 class PostsScreen extends StatefulWidget {
-//  final RedditController redditController;
+  final RedditController redditController;
+
+  const PostsScreen({Key key, this.redditController}) : super(key: key);
 
   @override
   PostsScreenState createState() {
@@ -34,10 +37,53 @@ class PostsScreenState extends State<PostsScreen>
     "2irl4mirl"
   ];
   AnimationController cardEntranceAnimationController;
-  List<Animation> ticketAnimations;
+  List<Animation> postTileAnimations;
   Animation fabAnimation;
 
-  AppBar _buildAppBar(PostsBloc bloc) {
+  @override
+  void initState() {
+    super.initState();
+
+    widget.redditController.addListener(() {
+      /* if (widget.redditController.currentSubreddit != currentSubreddit) {
+        print("hey");
+        widget.redditController.setCurrentSubreddit=currentSubreddit;
+        widget.redditController.getSubredditPosts(currentSubreddit);
+      }*/
+      if (widget.redditController.newPosts) {
+        widget.redditController.posts;
+        print("huh");
+        setUpAnimations();
+        setState(() {
+          cardEntranceAnimationController.forward();
+        });
+      }
+    });
+    widget.redditController.getFrontPage();
+  }
+
+  setUpAnimations() {
+    cardEntranceAnimationController = new AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 1100),
+    );
+
+    fabAnimation = new CurvedAnimation(
+        parent: cardEntranceAnimationController,
+        curve: Interval(0.7, 1.0, curve: Curves.decelerate));
+    postTileAnimations = widget.redditController.posts.map((post) {
+      int index = widget.redditController.posts.indexOf(post);
+      double start = index < 5 ? index * 0.1 : .4;
+      double duration = 0.6;
+      double end = duration + start;
+      return new Tween<double>(begin: 800.0, end: 0.0).animate(
+          new CurvedAnimation(
+              parent: cardEntranceAnimationController,
+              curve: new Interval(start, end, curve: Curves.decelerate)));
+    }).toList();
+  }
+
+  AppBar _buildAppBar() {
     return new AppBar(
       leading: Icon(Icons.menu),
       title: Column(
@@ -51,18 +97,15 @@ class PostsScreenState extends State<PostsScreen>
           icon: Icon(Icons.filter_hdr),
           onPressed: () {
             setState(() {
-              bloc.redditController.clearpostImage();
+              widget.redditController.clearpostImage();
               showimage = false;
             });
-            // bloc.redditController.vote("t3_"+posts[0].id);
-            // bloc.redditController
-            //    .getComments(posts[0].id, posts[0].subreddit);
           },
         ),
         IconButton(
           icon: Icon(Icons.refresh),
           onPressed: () {
-            bloc.fetchmore();
+            // bloc.fetchmore();
           },
         ),
         IconButton(
@@ -237,9 +280,9 @@ class PostsScreenState extends State<PostsScreen>
     );
   }
 
-  Iterable<Widget> _buildTickets() {
-    return posts.map((post) {
-      int index = posts.indexOf(post);
+  Iterable<Widget> _buildPosts() {
+    return widget.redditController.posts.map((post) {
+      int index = widget.redditController.posts.indexOf(post);
       return AnimatedBuilder(
         animation: cardEntranceAnimationController,
         child: Padding(
@@ -248,12 +291,11 @@ class PostsScreenState extends State<PostsScreen>
           ),
           child: PostWidget(
             newPost: post,
-            redditController:
-                PostsBlocProvider.of(context).bloc.redditController,
+            redditController: widget.redditController,
           ),
         ),
         builder: (context, child) => new Transform.translate(
-              offset: Offset(0.0, ticketAnimations[index].value),
+              offset: Offset(0.0, postTileAnimations[index].value),
               child: child,
             ),
       );
@@ -269,7 +311,7 @@ class PostsScreenState extends State<PostsScreen>
         ),
         child: PostWidget(
           newPost: post,
-          redditController: PostsBlocProvider.of(context).bloc.redditController,
+          redditController: widget.redditController,
         ),
       ));
     });
@@ -278,23 +320,15 @@ class PostsScreenState extends State<PostsScreen>
 
   @override
   Widget build(BuildContext context) {
-    PostsBloc bloc = PostsBlocProvider.of(context).bloc;
-    if (bloc.getCurrentState().posts.isEmpty ||
-        bloc.getCurrentState().posts == null) {
-      bloc.frontPage();
+    //PostsBloc bloc = PostsBlocProvider.of(context).bloc;
+    /*if (widget.redditController.posts.isEmpty) {
+      widget.redditController.getFrontPage();
     } else {
-      posts = bloc.getCurrentState().posts;
-    }
-    bloc.redditController.addListener(() {
-      if (bloc.redditController.postImageSelected != null) {
-        setState(() {
-          showimage = true;
-        });
-      }
-    });
+      posts = widget.redditController.posts;
+    }*/
     return Scaffold(
       backgroundColor: Colors.grey[200],
-      appBar: _buildAppBar(bloc),
+      appBar: _buildAppBar(),
       body: Stack(
         children: <Widget>[
           Container(
@@ -306,7 +340,8 @@ class PostsScreenState extends State<PostsScreen>
                     onTap: () {
                       print(subReddits[index]);
                       currentSubreddit = subReddits[index];
-                      bloc.Subreddit(subReddits[index]);
+                      widget.redditController.setCurrentSubreddit =
+                          subReddits[index];
                     },
                     child: Container(
                       height: 40.0,
@@ -322,54 +357,13 @@ class PostsScreenState extends State<PostsScreen>
           ),
           Padding(
             padding: const EdgeInsets.only(top: 40.0),
-            child: StreamBuilder(
-                initialData: bloc.getCurrentState(),
-                stream: bloc.postsStream,
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return Center(
-                        /* child: Text(AppLocalizations.of(context).get('something_wrong'/),*/
-                        );
-                  }
-                  if (snapshot.data.loading) {
-                    return Center();
-                  }
-
-                  posts = snapshot.data.posts;
-                  if (showimage) {
-                    return SingleChildScrollView(
-                      child: new Column(
-                        children: _buildUnanimated(),
-                      ),
-                    );
-                  }
-                  cardEntranceAnimationController = new AnimationController(
-                    vsync: this,
-                    duration: Duration(milliseconds: 1100),
-                  );
-                  ticketAnimations = posts.map((post) {
-                    int index = posts.indexOf(post);
-                    double start = index < 5 ? index * 0.1 : .4;
-                    double duration = 0.6;
-                    double end = duration + start;
-                    return new Tween<double>(begin: 800.0, end: 0.0).animate(
-                        new CurvedAnimation(
-                            parent: cardEntranceAnimationController,
-                            curve: new Interval(start, end,
-                                curve: Curves.decelerate)));
-                  }).toList();
-                  fabAnimation = new CurvedAnimation(
-                      parent: cardEntranceAnimationController,
-                      curve: Interval(0.7, 1.0, curve: Curves.decelerate));
-                  cardEntranceAnimationController.forward();
-                  return SingleChildScrollView(
-                    child: new Column(
-                      children: _buildTickets().toList(),
-                    ),
-                  );
-                }),
+            child: SingleChildScrollView(
+              child: new Column(
+                children: _buildPosts().toList(),
+              ),
+            ),
           ),
-          showimage
+          /*showimage
               ? Stack(
                   fit: StackFit.expand,
                   children: <Widget>[
@@ -382,7 +376,7 @@ class PostsScreenState extends State<PostsScreen>
                     Image.network(bloc.redditController.postImageSelected),
                   ],
                 )
-              : Container(),
+              : Container(),*/
         ],
       ),
       drawer: _buildDrawer(),
@@ -412,224 +406,3 @@ class ExpandableMenuItem extends StatelessWidget {
     );
   }
 }
-
-/*class PostsScreen extends StatefulWidget {
-  final RedditController redditController;
-
-  const PostsScreen({Key key, this.redditController}) : super(key: key);
-
-  @override
-  PostsScreenState createState() {
-    return new PostsScreenState();
-  }
-}
-
-class PostsScreenState extends State<PostsScreen> {
-  List<Post> posts = [];
-
-  List<String> subReddits = [
-    "Popular",
-    "All",
-    "AskReddit",
-    "ADHD",
-    "bestof",
-    "books",
-    "Politics",
-    "Soccer",
-    "2irl4mirl"
-  ];
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    frontpage();
-  }
-
-  frontpage() async {
-    var stream = await widget.redditController.FrontPage();
-    stream.listen((_post) => setState(() {
-          print("Hey");
-          posts.add(_post);
-        }));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    /*PostsBloc bloc = PostsBlocProvider.of(context).bloc;
-    if (bloc.getCurrentState().posts.isEmpty ||
-        bloc.getCurrentState().posts == null) {
-      bloc.frontPage();
-    } else {
-      posts = bloc.getCurrentState().posts;
-      print(posts);
-    }*/
-    return Scaffold(
-        appBar: new AppBar(
-          leading: Icon(Icons.menu),
-          title: Column(
-            children: <Widget>[
-              Text("AskReddit"),
-              Text("Hot"),
-            ],
-          ),
-          actions: <Widget>[
-            IconButton(
-              icon: Icon(Icons.filter_hdr),
-              onPressed: () {},
-            ),
-            IconButton(
-              icon: Icon(Icons.refresh),
-              onPressed: () {
-                //bloc.fetchmore();
-              },
-            ),
-            IconButton(
-              icon: Icon(Icons.more_vert),
-              onPressed: () {
-                //setState(() {});
-              },
-            ),
-          ],
-        ),
-        body:
-            /*StreamBuilder(
-          initialData: bloc.getCurrentState(),
-          stream: bloc.postsStream,
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return Center(
-                /* child: Text(AppLocalizations.of(context).get('something_wrong'/),*/
-              );
-            }
-            if (snapshot.data.loading) {
-              return Center();
-            }
-            posts = snapshot.data.posts;
-            return */
-            Column(
-          children: <Widget>[
-            Container(
-              height: 40.0,
-              child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: List.generate(subReddits.length, (index) {
-                    return GestureDetector(
-                      onTap: () {
-                        print(subReddits[index]);
-                        // bloc.Subreddit(subReddits[index]);
-                      },
-                      child: Container(
-                        height: 40.0,
-                        width: 70.0,
-                        decoration: BoxDecoration(
-                            border: Border.all(color: Colors.black)),
-                        child: Center(
-                          child: Text(subReddits[index]),
-                        ),
-                      ),
-                    );
-                  })),
-            ),
-            Expanded(
-              child: new ListView(
-                children: List.generate(posts.length, (_postindex) {
-                  Post newPost = posts[_postindex];
-                  Duration timesincepost =
-                      DateTime.now().toUtc().difference(newPost.postedTime);
-                  return Container(
-                    height: 130.0,
-                    color: Colors.blue,
-                    child: Column(children: [
-                      Text(
-                        newPost.title,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14.0,
-                        ),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: <Widget>[
-                          newPost.stickied
-                              ? Container(
-                                  height: 20.0,
-                                  width: 60.0,
-                                  decoration: BoxDecoration(
-                                      color: Colors.green,
-                                      borderRadius: BorderRadius.circular(2.0)),
-                                  child: Center(
-                                    child: Text(
-                                      "STICKY",
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                  ))
-                              : Container(),
-                          newPost.gilded > 0
-                              ? Icon(
-                                  Icons.monetization_on,
-                                )
-                              : Container(),
-                          newPost.over18
-                              ? Container(
-                                  height: 20.0,
-                                  width: 50.0,
-                                  decoration: BoxDecoration(
-                                      color: Colors.red,
-                                      borderRadius: BorderRadius.circular(2.0)),
-                                  child: Center(
-                                    child: Text(
-                                      "NSFW",
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                  ))
-                              : Container(),
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            newPost.subreddit,
-                            style: TextStyle(color: Colors.red),
-                          ),
-                          Icon(Icons.alarm),
-                          Text(timesincepost.inMinutes > 60
-                              ? timesincepost.inHours.toString() + "h"
-                              : timesincepost.inMinutes.toString() + "m"),
-                          Icon(Icons.person),
-                          Text(newPost.author),
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: <Widget>[
-                          Icon(Icons.menu),
-                          Icon(Icons.chat_bubble),
-                          Text(newPost.numcomments.toString()),
-                          Icon(Icons.arrow_upward),
-                          Text(newPost.score < 1000
-                              ? newPost.score.toString()
-                              : newPost.score < 10000
-                                  ? (newPost.score / 1000)
-                                          .toStringAsPrecision(2) +
-                                      "k"
-                                  : (newPost.score / 1000).floor().toString() +
-                                      "k"),
-                          Icon(Icons.arrow_downward),
-                          Icon(Icons.more_vert),
-                        ],
-                      )
-                    ]),
-                  );
-                }),
-              ),
-            ),
-          ],
-        )
-        //  }),
-        // This trailing comma makes auto-formatting nicer for build methods.
-        );
-  }
-}
-
-*/

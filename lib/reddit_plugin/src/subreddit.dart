@@ -15,15 +15,6 @@ class Subreddit extends Object with Listings {
    * Allowed filters are "comment", "context", "depth", "limit", "sort".
    */
 
-  Listing coments(String article) =>
-      new Listing._(_reddit, _res("comments/$article"), {});
-
-  FilterableQuery comments(String article) => new FilterableQuery._(
-      _reddit,
-      _res("comments/$article"),
-      {},
-      ["comment", "context", "depth", "limit", "sort"]);
-
   /**
    * Allowed filters are "id", "limit", "url".
    */
