@@ -1,10 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_webview_plugin/flutter_webview_plugin.dart';
 import 'package:reddit_clone_f/Components/post_widget.dart';
 import 'package:reddit_clone_f/Controllers/reddit_controller.dart';
-import 'package:reddit_clone_f/blocs/PostsBloc.dart';
 import 'package:reddit_clone_f/Models/post.dart';
+import 'package:reddit_clone_f/Screens/post_web_view.dart';
 import 'package:reddit_clone_f/generic/menu_items_expansion_tile.dart';
-import 'package:reddit_clone_f/providers/posts_bloc_provider.dart';
 
 class PostsScreen extends StatefulWidget {
   final RedditController redditController;
@@ -20,6 +22,7 @@ class PostsScreen extends StatefulWidget {
 class PostsScreenState extends State<PostsScreen>
     with TickerProviderStateMixin {
   String currentSubreddit = "frontpage";
+  bool first = true;
   CurrentScreen screen = CurrentScreen.postsScreen;
 
   List<String> subReddits = [
@@ -35,6 +38,7 @@ class PostsScreenState extends State<PostsScreen>
     "pics",
     "2irl4mirl"
   ];
+  ScrollController scrollController = ScrollController();
   AnimationController cardEntranceAnimationController;
   List<Animation> postTileAnimations;
   Animation fabAnimation;
@@ -43,17 +47,22 @@ class PostsScreenState extends State<PostsScreen>
   void initState() {
     super.initState();
     widget.redditController.addListener(() {
-      if (widget.redditController.currentScreen == screen &&
-          widget.redditController.newPosts) {
-        widget.redditController.postsRecieved();
-        print("huh");
-        setUpAnimations();
-        setState(() {
-          cardEntranceAnimationController.forward();
-        });
+      if (widget.redditController.currentScreen == screen) {
+        if (widget.redditController.newPosts) {
+          widget.redditController.postsRecieved();
+          setUpAnimations();
+          setState(() {
+            scrollController.jumpTo(0.0);
+            cardEntranceAnimationController.forward();
+          });
+        } else if (first) {
+          widget.redditController.getFrontPage();
+          setState(() {
+            first = false;
+          });
+        }
       }
     });
-    widget.redditController.getFrontPage();
   }
 
   setUpAnimations() {
@@ -75,6 +84,78 @@ class PostsScreenState extends State<PostsScreen>
               parent: cardEntranceAnimationController,
               curve: new Interval(start, end, curve: Curves.decelerate)));
     }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[200],
+      appBar: _buildAppBar(),
+      body: Stack(
+        children: <Widget>[
+          Container(
+            height: 40.0,
+            child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: List.generate(subReddits.length, (index) {
+                  return GestureDetector(
+                    onTap: () {
+                      print(subReddits[index]);
+                      currentSubreddit = subReddits[index];
+                      widget.redditController.setCurrentSubreddit =
+                          subReddits[index];
+                    },
+                    child: Container(
+                      height: 40.0,
+                      width: 70.0,
+                      decoration: BoxDecoration(
+                          border: Border.all(color: Colors.black)),
+                      child: Center(
+                        child: Text(subReddits[index]),
+                      ),
+                    ),
+                  );
+                })),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 40.0),
+            child: SingleChildScrollView(
+              controller: scrollController,
+              child: new Column(
+                children: _buildPosts().toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
+      drawer: _buildDrawer(),
+    );
+  }
+
+  Iterable<Widget> _buildPosts() {
+    return widget.redditController.posts.map((post) {
+      int index = widget.redditController.posts.indexOf(post);
+      return AnimatedBuilder(
+        animation: cardEntranceAnimationController,
+        child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: 4.0, /* horizontal: 8.0*/
+            ),
+            child: PostWidget(
+                newPost: post,
+                redditController: widget.redditController,
+                onLinkClicked: () => Navigator.push(
+                    context,
+                    new MaterialPageRoute(
+                        builder: (_) => PostWebView(
+                              activePost: post,
+                            ))))),
+        builder: (context, child) => new Transform.translate(
+              offset: Offset(0.0, postTileAnimations[index].value),
+              child: child,
+            ),
+      );
+    });
   }
 
   AppBar _buildAppBar() {
@@ -265,95 +346,6 @@ class PostsScreenState extends State<PostsScreen>
                 );
               }),
             )),
-    );
-  }
-
-  Iterable<Widget> _buildPosts() {
-    return widget.redditController.posts.map((post) {
-      int index = widget.redditController.posts.indexOf(post);
-      return AnimatedBuilder(
-        animation: cardEntranceAnimationController,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            vertical: 4.0, /* horizontal: 8.0*/
-          ),
-          child: PostWidget(
-            newPost: post,
-            redditController: widget.redditController,
-          ),
-        ),
-        builder: (context, child) => new Transform.translate(
-              offset: Offset(0.0, postTileAnimations[index].value),
-              child: child,
-            ),
-      );
-    });
-  }
-
-  /*List<Widget> _buildUnanimated() {
-    List<Widget> postWidgets = [];
-    posts.forEach((post) {
-      postWidgets.add(Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: 4.0, /* horizontal: 8.0*/
-        ),
-        child: PostWidget(
-          newPost: post,
-          redditController: widget.redditController,
-        ),
-      ));
-    });
-    return postWidgets;
-  }*/
-
-  @override
-  Widget build(BuildContext context) {
-    //PostsBloc bloc = PostsBlocProvider.of(context).bloc;
-    /*if (widget.redditController.posts.isEmpty) {
-      widget.redditController.getFrontPage();
-    } else {
-      posts = widget.redditController.posts;
-    }*/
-    return Scaffold(
-      backgroundColor: Colors.grey[200],
-      appBar: _buildAppBar(),
-      body: Stack(
-        children: <Widget>[
-          Container(
-            height: 40.0,
-            child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: List.generate(subReddits.length, (index) {
-                  return GestureDetector(
-                    onTap: () {
-                      print(subReddits[index]);
-                      currentSubreddit = subReddits[index];
-                      widget.redditController.setCurrentSubreddit =
-                          subReddits[index];
-                    },
-                    child: Container(
-                      height: 40.0,
-                      width: 70.0,
-                      decoration: BoxDecoration(
-                          border: Border.all(color: Colors.black)),
-                      child: Center(
-                        child: Text(subReddits[index]),
-                      ),
-                    ),
-                  );
-                })),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 40.0),
-            child: SingleChildScrollView(
-              child: new Column(
-                children: _buildPosts().toList(),
-              ),
-            ),
-          ),
-        ],
-      ),
-      drawer: _buildDrawer(),
     );
   }
 }

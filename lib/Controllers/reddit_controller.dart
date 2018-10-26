@@ -16,12 +16,12 @@ class RedditController extends ChangeNotifier {
   bool get redditInitialized => _redditInitialized;
 
   initFirst(String code) async {
+    _currentScreen = CurrentScreen.postsScreen;
     reddit = Reddit(new Client());
     reddit.authSetup(NL.identifier, NL.secret);
     await reddit.authUrl("http://localhost:8080", scopes: ["*"], state: "TEST");
     await reddit.authFinish(code: code);
     _redditInitialized = true;
-    _currentScreen = CurrentScreen.postsScreen;
     notifyListeners();
   }
 
@@ -33,7 +33,6 @@ class RedditController extends ChangeNotifier {
   String _currentSubreddit = "frontpage";
   bool _newPosts = false;
   String _postImageSelected;
-  //bool _showimage = false;
 
   Post _activePost;
   List<CommentTree> _commentTrees;
@@ -43,10 +42,16 @@ class RedditController extends ChangeNotifier {
   String get currentSubreddit => _currentSubreddit;
   bool get newPosts => _newPosts;
   List<CommentTree> get commentTrees => _commentTrees;
+  String get activeUrl => _activePost.url;
 
   set setCurrentSubreddit(String newSubreddit) {
     _currentSubreddit = newSubreddit;
     getSubredditPosts(_currentSubreddit);
+  }
+
+  set setActivePost(Post newActivePost) {
+    _activePost = newActivePost;
+    notifyListeners();
   }
 
   exitSinglePostScreen() {
@@ -61,18 +66,15 @@ class RedditController extends ChangeNotifier {
   }
 
   String get postImageSelected => _postImageSelected;
-  //bool get showimage => _showimage;
 
   selectPostImage(String imageurl) {
     _postImageSelected = imageurl;
-    //_showimage = true;
     _currentScreen = CurrentScreen.imageOverlayScreen;
     notifyListeners();
   }
 
   clearpostImage() {
     _postImageSelected = null;
-    //_showimage = false;
     _currentScreen = CurrentScreen.postsScreen;
     notifyListeners();
   }
@@ -81,6 +83,10 @@ class RedditController extends ChangeNotifier {
   getSubredditPosts(String subreddit,
       {String sortby = "hot", String t_option = "week"}) async {
     _currentSubreddit = subreddit;
+    if (subreddit == "frontpage") {
+      await getFrontPage();
+      return;
+    }
     _posts = [];
     if (_redditInitialized) {
       _currentPostData = sortby == "hot"
@@ -129,10 +135,9 @@ class RedditController extends ChangeNotifier {
       }
       return null;
     }
-    print("Dammit");
   }
 
-/* SinglePostPage */
+/* SINGLEPOSTPAGE*/
   openPostScreen(Post newActivePost) async {
     _currentScreen = CurrentScreen.singlePostScreen;
     _activePost = newActivePost;
@@ -144,7 +149,7 @@ class RedditController extends ChangeNotifier {
     // var data = await
     _commentTrees = [];
     var data = await reddit.comments(sub, id);
-    // print(data);
+    print(data[0]);
 
     List comments = data[1]['data']['children'];
     comments.forEach((_commentTree) {
@@ -154,17 +159,9 @@ class RedditController extends ChangeNotifier {
         print(_commentTree);
       }
     });
-
-    /* _commentTrees.forEach((_c) {
-      print("${_c.depth} :   ${_c.body}");
-      if (_c.replies != null) {
-        _c.replies.forEach((_c2) {
-          print("${_c2.depth} :   ${_c2.body}");
-        });
-      }
-      //print(_c.replies.length);
-    });*/
   }
+
+  /* WEBVIEW PAGE */
 
   /* USER ACTIONS */
 
@@ -182,4 +179,5 @@ enum CurrentScreen {
   singlePostScreen,
   imageOverlayScreen,
   loginScreen,
+  webviewScreen,
 }
