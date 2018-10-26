@@ -108,15 +108,7 @@ class _SinglePostScreenState extends State<SinglePostScreen>
               isExpanded: true,
               redditController: widget.redditController,
             ),
-          ]..addAll(_buildPosts().toList()
-                      /* List.generate(commentTrees.length, (index) {
-                        return CommentTreeExpansionTile(
-                          commentTree: commentTrees[index],
-                          redditController: widget.redditController,
-                        );
-                      }),
-                      */
-                      )));
+          ]..addAll(_buildPosts().toList())));
         },
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:reddit_clone_f/Controllers/reddit_controller.dart';
 import 'package:reddit_clone_f/Models/comment_tree.dart';
+import 'package:reddit_clone_f/widget_utils.dart';
 
 const Duration _kExpand = Duration(milliseconds: 200);
 
@@ -250,18 +251,28 @@ class _CommentTreeExpansionTileState extends State<CommentTreeExpansionTile>
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: List.generate(6, (i) {
-                          return Align(
-                            heightFactor: _optionsheightFactor.value,
-                            child: Center(
-                              child: IconButton(
-                                icon: Icon(
-                                  optionsIcons[i],
-                                  size: 20.0,
-                                  color: Colors.grey[500],
-                                ),
-                                onPressed: () {},
-                              ),
+                          if (optionsIcons[i] == Icons.arrow_upward ||
+                              optionsIcons[i] == Icons.arrow_downward) {
+                            return voteIconButton(
+                                upvote: i ==
+                                    optionsIcons.indexOf(Icons.arrow_upward),
+                                likes: widget.commentTree.likes,
+                                onVote: (way, newlikes, add) {
+                                  setState(() {
+                                    widget.commentTree.likes = newlikes;
+                                    widget.commentTree.score += (add) ? 1 : -1;
+                                    widget.redditController
+                                        .vote(widget.commentTree.fullId, way);
+                                  });
+                                });
+                          }
+                          return IconButton(
+                            icon: Icon(
+                              optionsIcons[i],
+                              size: 20.0,
+                              color: Colors.grey[500],
                             ),
+                            onPressed: () {},
                           );
                         })),
                   ),

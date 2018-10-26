@@ -18,22 +18,6 @@ class MyApp extends StatelessWidget {
       theme: new ThemeData(
         primarySwatch: Colors.blue,
       ),
-      /*routes: {
-          "/": (_) => new MyHomePage(
-                redditcontroller: redditcontroller,
-              ),
-          "/webview": (_) => WebviewScaffold(
-                url: redditcontroller.activeUrl,
-                appBar: AppBar(
-                  title: Text("WebView"),
-                ),
-                // Appbar
-                withJavascript: true,
-                withLocalStorage: true,
-                withZoom: true,
-              ),
-        }*/
-      // WebviewScaffold
       home: MyHomePage(),
     );
   }
@@ -57,15 +41,6 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     redditController = new RedditController();
-    /*redditcontroller.addListener(() {
-      if (redditcontroller.redditInitialized != isInitialized) {
-        setState(() {
-          isInitialized = redditcontroller.redditInitialized;
-        });
-      }
-    });
-    // bloc = PostsBloc(redditController: redditcontroller);
-    */
   }
 
   @override
@@ -78,7 +53,6 @@ class _MyHomePageState extends State<MyHomePage> {
         ImageOverlayScreen(
           redditController: redditController,
         ),
-        // SinglePostScreen(redditController: redditController),
         LoginWebView(redditController: redditController),
       ],
     );
