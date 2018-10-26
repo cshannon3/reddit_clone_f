@@ -63,7 +63,7 @@ class CommentTreeExpansionTile extends StatefulWidget {
 }
 
 class _CommentTreeExpansionTileState extends State<CommentTreeExpansionTile>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   static final Animatable<double> _easeOutTween =
       CurveTween(curve: Curves.easeOut);
   static final Animatable<double> _easeInTween =
@@ -77,6 +77,7 @@ class _CommentTreeExpansionTileState extends State<CommentTreeExpansionTile>
   final ColorTween _backgroundColorTween = ColorTween();
 
   AnimationController _controller;
+
   Animation<double> _iconTurns;
   Animation<double> _heightFactor;
   Animation<Color> _borderColor;
@@ -84,7 +85,12 @@ class _CommentTreeExpansionTileState extends State<CommentTreeExpansionTile>
   Animation<Color> _iconColor;
   Animation<Color> _backgroundColor;
 
+  AnimationController _optionsController;
+  Animation<double> _optionsheightFactor;
+
   bool _isExpanded = false;
+
+  bool _isOptionsExpanded = false;
 
   @override
   void initState() {
@@ -97,15 +103,20 @@ class _CommentTreeExpansionTileState extends State<CommentTreeExpansionTile>
     _iconColor = _controller.drive(_iconColorTween.chain(_easeInTween));
     _backgroundColor =
         _controller.drive(_backgroundColorTween.chain(_easeOutTween));
-
     _isExpanded =
         PageStorage.of(context)?.readState(context) ?? widget.initiallyExpanded;
     if (_isExpanded) _controller.value = 1.0;
+
+    _isOptionsExpanded = false;
+    _optionsController = AnimationController(duration: _kExpand, vsync: this);
+    _optionsheightFactor = _optionsController.drive(_easeOutTween);
+    if (_isOptionsExpanded) _optionsController.value = 1.0;
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _optionsController.dispose();
     super.dispose();
   }
 
@@ -128,6 +139,19 @@ class _CommentTreeExpansionTileState extends State<CommentTreeExpansionTile>
       widget.onExpansionChanged(_isExpanded);
   }
 
+  void _handleLongPress() {
+    _isOptionsExpanded = !_isOptionsExpanded;
+    setState(() {
+      if (_isOptionsExpanded) {
+        _optionsController.forward();
+      } else {
+        _optionsController.reverse().then<void>((void value) {
+          if (!mounted) return;
+        });
+      }
+    });
+  }
+
   Widget _buildChildren(BuildContext context, Widget child) {
     final Color borderSideColor = _borderColor.value ?? Colors.transparent;
     final Color titleColor = _headerColor.value;
@@ -142,26 +166,81 @@ class _CommentTreeExpansionTileState extends State<CommentTreeExpansionTile>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          IconTheme.merge(
-            data: IconThemeData(color: _iconColor.value),
-            child: Row(children: <Widget>[
-              Text(widget.commentTree.author),
-              Expanded(child: Container()),
-              Text(widget.commentTree.score.toString()),
-              RotationTransition(
-                turns: _iconTurns,
-                child: IconButton(
-                  onPressed: _handleTap,
-                  icon: const Icon(Icons.expand_more),
-                  iconSize: 30.0,
-                ),
+          GestureDetector(
+            onTap: _handleTap,
+            onLongPress: _handleLongPress,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 5.0),
+              decoration: BoxDecoration(
+                  color: _isOptionsExpanded
+                      ? Colors.lightBlue.withOpacity(.3)
+                      : Colors.transparent,
+                  border: Border(
+                      left: BorderSide(
+                          color: commentColors[
+                              widget.commentTree.depth % commentColors.length],
+                          width: 3.0 + 1.0 * widget.commentTree.depth))),
+              child: Column(
+                children: <Widget>[
+                  IconTheme.merge(
+                    data: IconThemeData(color: _iconColor.value),
+                    child: Row(children: <Widget>[
+                      Text(widget.commentTree.author),
+                      Expanded(child: Container()),
+                      Text(widget.commentTree.score.toString()),
+                      RotationTransition(
+                        turns: _iconTurns,
+                        child:
+                            /*IconButton(
+                          onPressed: _handleTap,
+                          icon:*/
+                            const Icon(
+                          Icons.expand_more,
+                          size: 30.0,
+                        ),
+                        //   iconSize: 30.0,
+                        // ),
+                      ),
+                    ]),
+                  ),
+                  Center(
+                    child: Text(widget.commentTree.body),
+                  ),
+                ],
               ),
-            ]),
-          ),
-          Container(
-            child: Center(
-              child: Text(widget.commentTree.body),
             ),
+          ),
+          AnimatedBuilder(
+            animation: _optionsController.view,
+            builder: (BuildContext context, Widget child) {
+              return ClipRect(
+                child: Align(
+                  heightFactor: _optionsheightFactor.value,
+                  child: Container(
+                    //  color: Colors.grey[300],
+                    height: 40.0,
+                    width: double.infinity,
+                    child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: List.generate(6, (i) {
+                          return Align(
+                            heightFactor: _optionsheightFactor.value,
+                            child: Center(
+                              child: IconButton(
+                                icon: Icon(
+                                  optionsIcons[i],
+                                  size: 20.0,
+                                ),
+                                onPressed: () {},
+                              ),
+                            ),
+                          );
+                        })),
+                  ),
+                ),
+              );
+            },
           ),
           ClipRect(
             child: Align(
@@ -207,3 +286,20 @@ class _CommentTreeExpansionTileState extends State<CommentTreeExpansionTile>
     );
   }
 }
+
+final List<Color> commentColors = [
+  Colors.blue,
+  Colors.orange,
+  Colors.green,
+  Colors.purple,
+  Colors.pink
+];
+
+final List<IconData> optionsIcons = [
+  Icons.star,
+  Icons.keyboard_backspace,
+  Icons.arrow_upward,
+  Icons.arrow_downward,
+  Icons.keyboard_arrow_up,
+  Icons.more_vert,
+];

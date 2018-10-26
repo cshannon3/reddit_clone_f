@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:reddit_clone_f/Controllers/reddit_controller.dart';
 import 'package:reddit_clone_f/Models/post.dart';
+import 'package:reddit_clone_f/Screens/image_overlay_screen.dart';
+import 'package:reddit_clone_f/Screens/post_web_view.dart';
+import 'package:reddit_clone_f/Screens/single_post_screen.dart';
 
 class PostWidget extends StatefulWidget {
   final Post newPost;
   final RedditController redditController;
-  final Function onLinkClicked;
+  //final Function onLinkClicked;
+  final bool isExpanded;
 
   const PostWidget({
     Key key,
     @required this.newPost,
     @required this.redditController,
-    @required this.onLinkClicked,
+    this.isExpanded = false,
+    // @required this.onLinkClicked,
   }) : super(key: key);
 
   @override
@@ -21,8 +26,6 @@ class PostWidget extends StatefulWidget {
 }
 
 class PostWidgetState extends State<PostWidget> {
-  bool expanded = false;
-
   Widget PostTile() {
     Duration timesincepost =
         DateTime.now().toUtc().difference(widget.newPost.postedTime);
@@ -128,6 +131,14 @@ class PostWidgetState extends State<PostWidget> {
                   ),
                 ],
               ),
+              (widget.isExpanded && widget.newPost.postType == PostType.self)
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10.0),
+                      child: Container(
+                        child: Text(widget.newPost.selftext),
+                      ),
+                    )
+                  : Container(),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: <Widget>[
@@ -138,11 +149,12 @@ class PostWidgetState extends State<PostWidget> {
                           size: 14.0,
                         )
                       : IconButton(
-                          onPressed: () {
-                            widget.redditController.setActivePost =
-                                widget.newPost;
-                            widget.onLinkClicked();
-                          },
+                          onPressed: () => Navigator.push(
+                              context,
+                              new MaterialPageRoute(
+                                  builder: (_) => PostWebView(
+                                        activePost: widget.newPost,
+                                      ))),
                           icon: Icon(
                             Icons.link,
                             color: Colors.grey[500],
@@ -152,9 +164,13 @@ class PostWidgetState extends State<PostWidget> {
                   Padding(
                     padding: const EdgeInsets.only(left: 12.0, right: 3.0),
                     child: IconButton(
-                      onPressed: () {
-                        widget.redditController.openPostScreen(widget.newPost);
-                      },
+                      onPressed: () => Navigator.push(
+                          context,
+                          new MaterialPageRoute(
+                              builder: (_) => SinglePostScreen(
+                                    activePost: widget.newPost,
+                                    redditController: widget.redditController,
+                                  ))),
                       icon: Icon(
                         Icons.chat_bubble,
                         color: Colors.grey[500],

@@ -78,7 +78,7 @@ class _MyHomePageState extends State<MyHomePage> {
         ImageOverlayScreen(
           redditController: redditController,
         ),
-        SinglePostScreen(redditController: redditController),
+        // SinglePostScreen(redditController: redditController),
         LoginWebView(redditController: redditController),
       ],
     );

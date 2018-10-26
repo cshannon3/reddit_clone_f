@@ -23,7 +23,9 @@ class PostsScreenState extends State<PostsScreen>
     with TickerProviderStateMixin {
   String currentSubreddit = "frontpage";
   bool first = true;
-  CurrentScreen screen = CurrentScreen.postsScreen;
+  bool reloading = true;
+  //CurrentScreen screen = CurrentScreen.postsScreen;
+  List<Post> posts = [];
 
   List<String> subReddits = [
     "frontpage",
@@ -47,25 +49,17 @@ class PostsScreenState extends State<PostsScreen>
   void initState() {
     super.initState();
     widget.redditController.addListener(() {
-      if (widget.redditController.currentScreen == screen) {
-        if (widget.redditController.newPosts) {
-          widget.redditController.postsRecieved();
-          setUpAnimations();
-          setState(() {
-            scrollController.jumpTo(0.0);
-            cardEntranceAnimationController.forward();
-          });
-        } else if (first) {
-          widget.redditController.getFrontPage();
-          setState(() {
-            first = false;
-          });
-        }
+      if (first && widget.redditController.redditInitialized) {
+        widget.redditController.getFrontPage();
+        setState(() {
+          first = false;
+        });
       }
     });
   }
 
-  setUpAnimations() {
+  setUpAnimations(List<Post> _newposts) {
+    print("yoo");
     cardEntranceAnimationController = new AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 1100),
@@ -74,8 +68,8 @@ class PostsScreenState extends State<PostsScreen>
     fabAnimation = new CurvedAnimation(
         parent: cardEntranceAnimationController,
         curve: Interval(0.7, 1.0, curve: Curves.decelerate));
-    postTileAnimations = widget.redditController.posts.map((post) {
-      int index = widget.redditController.posts.indexOf(post);
+    postTileAnimations = _newposts.map((post) {
+      int index = _newposts.indexOf(post);
       double start = index < 5 ? index * 0.1 : .4;
       double duration = 0.6;
       double end = duration + start;
@@ -84,6 +78,8 @@ class PostsScreenState extends State<PostsScreen>
               parent: cardEntranceAnimationController,
               curve: new Interval(start, end, curve: Curves.decelerate)));
     }).toList();
+
+    cardEntranceAnimationController.forward();
   }
 
   @override
@@ -117,14 +113,35 @@ class PostsScreenState extends State<PostsScreen>
                   );
                 })),
           ),
-          Padding(
-            padding: const EdgeInsets.only(top: 40.0),
-            child: SingleChildScrollView(
-              controller: scrollController,
-              child: new Column(
-                children: _buildPosts().toList(),
-              ),
-            ),
+          StreamBuilder(
+            initialData: widget.redditController.postsBloc.getCurrentState(),
+            stream: widget.redditController.postsBloc.postsStream,
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text(""),
+                );
+              }
+              if (snapshot.data.loading) {
+                reloading = true;
+                return Center();
+              }
+              posts = snapshot.data.posts;
+              // scrollController.jumpTo(0.0);
+              if (reloading) {
+                setUpAnimations(posts);
+                reloading = false;
+              }
+              return Padding(
+                padding: const EdgeInsets.only(top: 40.0),
+                child: SingleChildScrollView(
+                  //controller: scrollController,
+                  child: new Column(
+                    children: _buildPosts().toList(),
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -133,23 +150,19 @@ class PostsScreenState extends State<PostsScreen>
   }
 
   Iterable<Widget> _buildPosts() {
-    return widget.redditController.posts.map((post) {
-      int index = widget.redditController.posts.indexOf(post);
+    return posts.map((post) {
+      int index = posts.indexOf(post);
       return AnimatedBuilder(
         animation: cardEntranceAnimationController,
         child: Padding(
-            padding: const EdgeInsets.symmetric(
-              vertical: 4.0, /* horizontal: 8.0*/
-            ),
-            child: PostWidget(
-                newPost: post,
-                redditController: widget.redditController,
-                onLinkClicked: () => Navigator.push(
-                    context,
-                    new MaterialPageRoute(
-                        builder: (_) => PostWebView(
-                              activePost: post,
-                            ))))),
+          padding: const EdgeInsets.symmetric(
+            vertical: 4.0, /* horizontal: 8.0*/
+          ),
+          child: PostWidget(
+            newPost: post,
+            redditController: widget.redditController,
+          ),
+        ),
         builder: (context, child) => new Transform.translate(
               offset: Offset(0.0, postTileAnimations[index].value),
               child: child,

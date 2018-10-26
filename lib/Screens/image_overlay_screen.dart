@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:reddit_clone_f/Controllers/reddit_controller.dart';
+import 'package:reddit_clone_f/Models/post.dart';
 
 class ImageOverlayScreen extends StatefulWidget {
   final RedditController redditController;
 
   const ImageOverlayScreen({Key key, this.redditController}) : super(key: key);
-
   @override
   _ImageOverlayScreenState createState() => _ImageOverlayScreenState();
 }

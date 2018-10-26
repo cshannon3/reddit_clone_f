@@ -33,7 +33,7 @@ class CommentTree {
         linkid = jsonMap['link_id'],
         likes = jsonMap['likes'],
         score = jsonMap['score'],
-        replies = (jsonMap['replies'] is String)
+        replies = (jsonMap['replies'] is String || jsonMap['replies'] == null)
             ? null
             : List.generate(
                 (jsonMap['replies']['data']['children'] as List)
@@ -42,16 +42,22 @@ class CommentTree {
                 /*  if (jsonMap['replies']['data']['children'][index]['kind'] ==
                     't1') {
                   print(jsonMap['replies']['data']['children'][index]);*/
-                return CommentTree.fromJson(
-                    jsonMap['replies']['data']['children'][index]['data'],
-                    depth + 1);
+                try {
+                  return CommentTree.fromJson(
+                      jsonMap['replies']['data']['children'][index]['data'],
+                      depth + 1);
+                } catch (e) {
+                  print("hmm");
+                }
                 // }
               }),
         depth = depth,
         parentId = jsonMap['parent_id'],
         gilded = jsonMap['gilded'],
         author = jsonMap['author'],
-        postedTime = DateTime.fromMillisecondsSinceEpoch(
-            (jsonMap['created_utc'] * 1000).floor(),
-            isUtc: true);
+        postedTime = (jsonMap['created_utc'] == null)
+            ? null
+            : DateTime.fromMillisecondsSinceEpoch(
+                (jsonMap['created_utc'] * 1000).floor(),
+                isUtc: true);
 }
