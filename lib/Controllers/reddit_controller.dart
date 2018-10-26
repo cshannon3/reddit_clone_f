@@ -7,19 +7,16 @@ import 'package:reddit_clone_f/nolookie.dart' as NL;
 
 class RedditController extends ChangeNotifier {
   Reddit reddit;
+  CurrentScreen _currentScreen = CurrentScreen.loginScreen;
+
+  CurrentScreen get currentScreen => _currentScreen;
+
+  /* AUTH */
   bool _redditInitialized = false;
-  ListingResult _currentData;
-  String _postImageSelected;
-
   bool get redditInitialized => _redditInitialized;
-  String get postImageSelected => _postImageSelected;
-
-  clearpostImage() {
-    _postImageSelected = null;
-    notifyListeners();
-  }
 
   initFirst(String code) async {
+    _currentScreen = CurrentScreen.postsScreen;
     reddit = Reddit(new Client());
     reddit.authSetup(NL.identifier, NL.secret);
     await reddit.authUrl("http://localhost:8080", scopes: ["*"], state: "TEST");
@@ -28,43 +25,106 @@ class RedditController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<List<Post>> getSubredditPosts(String subreddit,
+  /* POSTS && SUBREDDITS */
+
+  /* VARIABLES */
+  ListingResult _currentPostData;
+  List<Post> _posts = [];
+  String _currentSubreddit = "frontpage";
+  bool _newPosts = false;
+  String _postImageSelected;
+
+  Post _activePost;
+  List<CommentTree> _commentTrees;
+
+  /* GETTERS AND SETTERS */
+  List<Post> get posts => _posts;
+  String get currentSubreddit => _currentSubreddit;
+  bool get newPosts => _newPosts;
+  List<CommentTree> get commentTrees => _commentTrees;
+  String get activeUrl => _activePost.url;
+
+  set setCurrentSubreddit(String newSubreddit) {
+    _currentSubreddit = newSubreddit;
+    getSubredditPosts(_currentSubreddit);
+  }
+
+  set setActivePost(Post newActivePost) {
+    _activePost = newActivePost;
+    notifyListeners();
+  }
+
+  exitSinglePostScreen() {
+    _commentTrees = [];
+    _activePost = null;
+    _currentScreen = CurrentScreen.postsScreen;
+    notifyListeners();
+  }
+
+  postsRecieved() {
+    _newPosts = false;
+  }
+
+  String get postImageSelected => _postImageSelected;
+
+  selectPostImage(String imageurl) {
+    _postImageSelected = imageurl;
+    _currentScreen = CurrentScreen.imageOverlayScreen;
+    notifyListeners();
+  }
+
+  clearpostImage() {
+    _postImageSelected = null;
+    _currentScreen = CurrentScreen.postsScreen;
+    notifyListeners();
+  }
+
+  /* SUBREDDIT POSTS DATA */
+  getSubredditPosts(String subreddit,
       {String sortby = "hot", String t_option = "week"}) async {
+    _currentSubreddit = subreddit;
+    if (subreddit == "frontpage") {
+      await getFrontPage();
+      return;
+    }
+    _posts = [];
     if (_redditInitialized) {
-      _currentData = sortby == "hot"
+      _currentPostData = sortby == "hot"
           ? await reddit.sub(subreddit).hot().limit(20).fetch()
           : sortby == "top"
               ? await reddit.sub(subreddit).top(t_option).limit(20).fetch()
               : await reddit.sub(subreddit).hot().limit(20).fetch();
-      List d = _currentData['data']['children'];
+      List d = _currentPostData['data']['children'];
       var list = d.map((_post) {
         return Post.fromJson(_post['data']);
       }).toList();
       if (list is List<Post>) {
-        return list;
+        _posts = list;
+        _newPosts = true;
+        notifyListeners();
       }
-      return null;
     }
   }
 
-  Future<List<Post>> getFrontPage() async {
+  getFrontPage() async {
+    _newPosts = true;
     if (_redditInitialized) {
-      _currentData = await reddit.frontPage.best().limit(20).fetch();
-      List d = _currentData['data']['children'];
+      _currentPostData = await reddit.frontPage.best().limit(20).fetch();
+      List d = _currentPostData['data']['children'];
       var list = d.map((_post) {
         return Post.fromJson(_post['data']);
       }).toList();
       if (list is List<Post>) {
-        return list;
+        _posts = list;
+        _newPosts = true;
+        notifyListeners();
       }
-      print("bad");
-      return null;
     }
   }
 
   Future<List<Post>> fetchmore() async {
-    if (_currentData != null) {
-      var _newData = await _currentData.fetchMore();
+    if (_currentPostData != null) {
+      var _newData = await _currentPostData.fetchMore();
       List d = _newData['data']['children'];
       print(d);
       var list = d.map((_post) {
@@ -75,59 +135,49 @@ class RedditController extends ChangeNotifier {
       }
       return null;
     }
-    print("Dammit");
   }
 
-  getComments(String id, String subreddit) async {
-    if (_redditInitialized) {
-      var data = await reddit.sub(subreddit).coments(id).fetch();
-      List d = data['data']['children'];
-
-      print(d);
-    }
-  }
-
-  vote(String id, String direction) {
-    // var data =
-    reddit.vote(id, direction);
-    /* data.forEach((a, b) {
-      print(" $a and $b");
-    });*/
+/* SINGLEPOSTPAGE*/
+  openPostScreen(Post newActivePost) async {
+    _currentScreen = CurrentScreen.singlePostScreen;
+    _activePost = newActivePost;
+    await comments(newActivePost.subreddit, newActivePost.id);
+    notifyListeners();
   }
 
   comments(String sub, String id) async {
     // var data = await
-    List<CommentTree> commentTrees = [];
+    _commentTrees = [];
     var data = await reddit.comments(sub, id);
+    print(data[0]);
 
     List comments = data[1]['data']['children'];
     comments.forEach((_commentTree) {
-      commentTrees.add(CommentTree.fromJson(_commentTree['data'], 0));
-    });
-
-    commentTrees.forEach((_c) {
-      print("${_c.depth} :   ${_c.body}");
-      if (_c.replies != null) {
-        _c.replies.forEach((_c2) {
-          print("${_c2.depth} :   ${_c2.body}");
-        });
+      try {
+        _commentTrees.add(CommentTree.fromJson(_commentTree['data'], 0));
+      } catch (e) {
+        print(_commentTree);
       }
-      //print(_c.replies.length);
     });
   }
 
-  selectPostImage(String imageurl) {
-    _postImageSelected = imageurl;
-    notifyListeners();
+  /* WEBVIEW PAGE */
+
+  /* USER ACTIONS */
+
+  vote(String id, String direction) {
+    reddit.vote(id, direction);
   }
 }
 
-/*enum SortBy {
-  hot,
-  top,
-  rising,
-  newest,
-}*/
 final List Sortby_options = ["hot", "top", "new", "controversal"];
 
 final List t_options = ["hour", "day", "week", "month", "year", "all"];
+
+enum CurrentScreen {
+  postsScreen,
+  singlePostScreen,
+  imageOverlayScreen,
+  loginScreen,
+  webviewScreen,
+}

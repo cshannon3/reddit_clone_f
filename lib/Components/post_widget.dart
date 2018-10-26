@@ -5,9 +5,14 @@ import 'package:reddit_clone_f/Models/post.dart';
 class PostWidget extends StatefulWidget {
   final Post newPost;
   final RedditController redditController;
+  final Function onLinkClicked;
 
-  const PostWidget({Key key, this.newPost, this.redditController})
-      : super(key: key);
+  const PostWidget({
+    Key key,
+    @required this.newPost,
+    @required this.redditController,
+    @required this.onLinkClicked,
+  }) : super(key: key);
 
   @override
   PostWidgetState createState() {
@@ -16,6 +21,8 @@ class PostWidget extends StatefulWidget {
 }
 
 class PostWidgetState extends State<PostWidget> {
+  bool expanded = false;
+
   Widget PostTile() {
     Duration timesincepost =
         DateTime.now().toUtc().difference(widget.newPost.postedTime);
@@ -124,17 +131,29 @@ class PostWidgetState extends State<PostWidget> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: <Widget>[
-                  Icon(
-                    Icons.menu,
-                    color: Colors.grey[500],
-                    size: 20.0,
-                  ),
+                  (widget.newPost.postType == PostType.self)
+                      ? Icon(
+                          Icons.menu,
+                          color: Colors.grey[400],
+                          size: 14.0,
+                        )
+                      : IconButton(
+                          onPressed: () {
+                            widget.redditController.setActivePost =
+                                widget.newPost;
+                            widget.onLinkClicked();
+                          },
+                          icon: Icon(
+                            Icons.link,
+                            color: Colors.grey[500],
+                            size: 20.0,
+                          ),
+                        ),
                   Padding(
                     padding: const EdgeInsets.only(left: 12.0, right: 3.0),
                     child: IconButton(
                       onPressed: () {
-                        widget.redditController.comments(
-                            widget.newPost.subreddit, widget.newPost.id);
+                        widget.redditController.openPostScreen(widget.newPost);
                       },
                       icon: Icon(
                         Icons.chat_bubble,

@@ -36,11 +36,16 @@ class CommentTree {
         replies = (jsonMap['replies'] is String)
             ? null
             : List.generate(
-                (jsonMap['replies']['data']['children'] as List).length,
-                (index) {
+                (jsonMap['replies']['data']['children'] as List)
+                    .where((_c) => (_c['kind'] == "t1"))
+                    .length, (index) {
+                /*  if (jsonMap['replies']['data']['children'][index]['kind'] ==
+                    't1') {
+                  print(jsonMap['replies']['data']['children'][index]);*/
                 return CommentTree.fromJson(
                     jsonMap['replies']['data']['children'][index]['data'],
                     depth + 1);
+                // }
               }),
         depth = depth,
         parentId = jsonMap['parent_id'],
