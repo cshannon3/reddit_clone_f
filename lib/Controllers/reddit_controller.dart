@@ -174,8 +174,8 @@ class RedditController extends ChangeNotifier {
 
   /* USER ACTIONS */
 
-  vote(String id, String direction) {
-    reddit.vote(id, direction);
+  vote(String fullId, String direction) {
+    reddit.vote(fullId, direction);
   }
 }
 

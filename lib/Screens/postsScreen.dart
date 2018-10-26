@@ -124,7 +124,9 @@ class PostsScreenState extends State<PostsScreen>
               }
               if (snapshot.data.loading) {
                 reloading = true;
-                return Center();
+                return Center(
+                  child: CircularProgressIndicator(),
+                );
               }
               posts = snapshot.data.posts;
               // scrollController.jumpTo(0.0);

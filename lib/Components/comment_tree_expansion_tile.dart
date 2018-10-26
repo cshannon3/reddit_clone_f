@@ -155,6 +155,8 @@ class _CommentTreeExpansionTileState extends State<CommentTreeExpansionTile>
   Widget _buildChildren(BuildContext context, Widget child) {
     final Color borderSideColor = _borderColor.value ?? Colors.transparent;
     final Color titleColor = _headerColor.value;
+    Duration timesincecomment =
+        DateTime.now().toUtc().difference(widget.commentTree.postedTime);
 
     return Container(
       decoration: BoxDecoration(
@@ -185,9 +187,33 @@ class _CommentTreeExpansionTileState extends State<CommentTreeExpansionTile>
                   IconTheme.merge(
                     data: IconThemeData(color: _iconColor.value),
                     child: Row(children: <Widget>[
-                      Text(widget.commentTree.author),
+                      Text(
+                        widget.commentTree.author,
+                        style: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 10.0,
+                            fontWeight: FontWeight.bold),
+                      ),
                       Expanded(child: Container()),
-                      Text(widget.commentTree.score.toString()),
+                      Text(
+                        widget.commentTree.score.toString() + " pts ᛫ ",
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 10.0,
+                        ),
+                      ),
+                      Text(
+                        timesincecomment.inMinutes > 60
+                            ? timesincecomment.inHours.toString() + "h"
+                            : timesincecomment.inMinutes.toString() + "m",
+                        style:
+                            TextStyle(color: Colors.grey[500], fontSize: 10.0),
+                      ),
+                      Icon(
+                        Icons.perm_identity,
+                        size: 15.0,
+                        color: Colors.grey[500],
+                      ),
                       RotationTransition(
                         turns: _iconTurns,
                         child:
@@ -231,6 +257,7 @@ class _CommentTreeExpansionTileState extends State<CommentTreeExpansionTile>
                                 icon: Icon(
                                   optionsIcons[i],
                                   size: 20.0,
+                                  color: Colors.grey[500],
                                 ),
                                 onPressed: () {},
                               ),
