@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import 'package:reddit_clone_f/Models/comment_tree.dart';
 import 'package:reddit_clone_f/Models/post.dart';
+import 'package:reddit_clone_f/blocs/comments_bloc.dart';
+import 'package:reddit_clone_f/blocs/posts_bloc.dart';
 import 'package:reddit_clone_f/reddit_plugin/reddit.dart';
 import 'package:reddit_clone_f/nolookie.dart' as NL;
 
@@ -11,6 +13,11 @@ class RedditController extends ChangeNotifier {
 
   CurrentScreen get currentScreen => _currentScreen;
 
+  final _postsBloc = PostsBloc();
+  final _commentsBloc = CommentsBloc();
+
+  PostsBloc get postsBloc => _postsBloc;
+  CommentsBloc get commentsBloc => _commentsBloc;
   /* AUTH */
   bool _redditInitialized = false;
   bool get redditInitialized => _redditInitialized;
@@ -29,19 +36,19 @@ class RedditController extends ChangeNotifier {
 
   /* VARIABLES */
   ListingResult _currentPostData;
-  List<Post> _posts = [];
+  // List<Post> _posts = [];
   String _currentSubreddit = "frontpage";
-  bool _newPosts = false;
+  // bool _newPosts = false;
   String _postImageSelected;
 
   Post _activePost;
-  List<CommentTree> _commentTrees;
+  //List<CommentTree> _commentTrees;
 
   /* GETTERS AND SETTERS */
-  List<Post> get posts => _posts;
+  // List<Post> get posts => _posts;
   String get currentSubreddit => _currentSubreddit;
-  bool get newPosts => _newPosts;
-  List<CommentTree> get commentTrees => _commentTrees;
+  // bool get newPosts => _newPosts;
+  //List<CommentTree> get commentTrees => _commentTrees;
   String get activeUrl => _activePost.url;
 
   set setCurrentSubreddit(String newSubreddit) {
@@ -55,16 +62,16 @@ class RedditController extends ChangeNotifier {
   }
 
   exitSinglePostScreen() {
-    _commentTrees = [];
+    //_commentTrees = [];
     _activePost = null;
     _currentScreen = CurrentScreen.postsScreen;
     notifyListeners();
   }
 
-  postsRecieved() {
+/*  postsRecieved() {
     _newPosts = false;
   }
-
+*/
   String get postImageSelected => _postImageSelected;
 
   selectPostImage(String imageurl) {
@@ -87,7 +94,8 @@ class RedditController extends ChangeNotifier {
       await getFrontPage();
       return;
     }
-    _posts = [];
+    //_posts = [];
+    _postsBloc.loadingPosts();
     if (_redditInitialized) {
       _currentPostData = sortby == "hot"
           ? await reddit.sub(subreddit).hot().limit(20).fetch()
@@ -99,27 +107,30 @@ class RedditController extends ChangeNotifier {
         return Post.fromJson(_post['data']);
       }).toList();
       if (list is List<Post>) {
-        _posts = list;
-        _newPosts = true;
-        notifyListeners();
+        // _posts = list;
+        _postsBloc.finishedLoading(list);
+        // _newPosts = true;
+        // notifyListeners();
       }
     }
   }
 
   getFrontPage() async {
-    _newPosts = true;
-    if (_redditInitialized) {
-      _currentPostData = await reddit.frontPage.best().limit(20).fetch();
-      List d = _currentPostData['data']['children'];
-      var list = d.map((_post) {
-        return Post.fromJson(_post['data']);
-      }).toList();
-      if (list is List<Post>) {
-        _posts = list;
-        _newPosts = true;
-        notifyListeners();
-      }
+    // _newPosts = true;
+    // if (_redditInitialized) {
+    _postsBloc.loadingPosts();
+    _currentPostData = await reddit.frontPage.best().limit(20).fetch();
+    List d = _currentPostData['data']['children'];
+    var list = d.map((_post) {
+      return Post.fromJson(_post['data']);
+    }).toList();
+    if (list is List<Post>) {
+      //  _posts = list;
+      // _newPosts = true;
+      _postsBloc.finishedLoading(list);
+      //  notifyListeners();
     }
+    //  }
   }
 
   Future<List<Post>> fetchmore() async {
@@ -147,26 +158,24 @@ class RedditController extends ChangeNotifier {
 
   comments(String sub, String id) async {
     // var data = await
-    _commentTrees = [];
+    // _commentTrees = [];
+    _commentsBloc.loadingComments();
     var data = await reddit.comments(sub, id);
-    print(data[0]);
-
     List comments = data[1]['data']['children'];
-    comments.forEach((_commentTree) {
-      try {
-        _commentTrees.add(CommentTree.fromJson(_commentTree['data'], 0));
-      } catch (e) {
-        print(_commentTree);
-      }
-    });
+    var list = comments.map((_commentTree) {
+      return CommentTree.fromJson(_commentTree['data'], 0);
+    }).toList();
+    if (list is List<CommentTree>) {
+      _commentsBloc.finishedLoading(list);
+    }
   }
 
   /* WEBVIEW PAGE */
 
   /* USER ACTIONS */
 
-  vote(String id, String direction) {
-    reddit.vote(id, direction);
+  vote(String fullId, String direction) {
+    reddit.vote(fullId, direction);
   }
 }
 
